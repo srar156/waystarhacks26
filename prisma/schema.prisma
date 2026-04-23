@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// amountMode: FIXED | RANGE | OPEN
+model PaymentPage {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  description   String?
+  brandColor    String   @default("#FF6900")
+  logoUrl       String?
+  headerMessage String?
+  footerMessage String?
+  amountMode    String   @default("OPEN")
+  fixedAmount   Decimal?
+  minAmount     Decimal?
+  maxAmount     Decimal?
+  glCodes       String   @default("[]")
+  isActive      Boolean  @default(true)
+  emailTemplate String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customFields CustomField[]
+  transactions Transaction[]
+}
+
+// fieldType: TEXT | NUMBER | DROPDOWN | DATE | CHECKBOX
+model CustomField {
+  id           String  @id @default(cuid())
+  pageId       String
+  label        String
+  fieldType    String  @default("TEXT")
+  options      String?
+  required     Boolean @default(false)
+  placeholder  String?
+  displayOrder Int     @default(0)
+
+  page           PaymentPage     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  fieldResponses FieldResponse[]
+}
+
+// status: SUCCESS | FAILED | PENDING
+model Transaction {
+  id                    String   @id @default(cuid())
+  pageId                String
+  amount                Decimal
+  paymentMethod         String
+  status                String
+  payerEmail            String
+  payerName             String
+  stripePaymentIntentId String?
+  glCode                String?
+  createdAt             DateTime @default(now())
+
+  page           PaymentPage     @relation(fields: [pageId], references: [id])
+  fieldResponses FieldResponse[]
+}
+
+model FieldResponse {
+  id            String @id @default(cuid())
+  transactionId String
+  fieldId       String
+  value         String
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  field       CustomField @relation(fields: [fieldId], references: [id])
+}
